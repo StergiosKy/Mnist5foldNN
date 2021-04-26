@@ -5,7 +5,6 @@ from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold
 from tensorflow import keras
 from dataset_funcs import create_dataset
-from auxiliary_funcs import rmse
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
 

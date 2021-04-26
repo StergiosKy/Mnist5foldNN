@@ -7,8 +7,6 @@ from tensorflow import keras
 from dataset_funcs import create_dataset
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
-
-
 import tensorflow as tf
 
 # Set parameters

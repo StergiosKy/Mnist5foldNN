@@ -14,7 +14,7 @@ hidden_layer_neurons = 397
 learning_rate = 0.05
 weight_momentum = 0.6
 weight_decay = 0.0
-r = 0.1
+r = 0.9
 batchsize = 512
 # this flag is used to determine if we do normalization or Standardization
 # we chose to avoid centering
@@ -27,7 +27,7 @@ if hidden_layer_2:
     hidden_layer_2_neurons = 397
 # CE vs MSE flag
 # False -> MSE, True -> CE
-use_CE = False
+use_CE = True
 
 # Read dataset
 dataset = np.loadtxt("mnist_train.csv", delimiter=",", skiprows=1)
@@ -37,6 +37,7 @@ output = dataset[:, 0]
 Y = OneHotEncoder(sparse=False).fit_transform(X=output.reshape(len(output), 1))
 # remove the output from the input dataset
 dataset = dataset[:, 1:]
+# this below is redundant for the specific case
 # test_dataset = np.loadtxt("mnist_test.csv", delimiter=",", skiprows=1)
 print("Successfully read the dataset")
 
@@ -103,7 +104,7 @@ for i, (train, test) in enumerate(kfold.split(X)):
         model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['accuracy'])
 
     # Fit model
-    history = model.fit(X[train], Y[train], epochs=epochs, batch_size=batchsize, verbose=0) 
+    history = model.fit(X[train], Y[train], epochs=epochs, batch_size=batchsize, verbose=0)
     history_list.append(history)
     history_loss.append(history.history['loss'])
     history_acc.append(history.history['accuracy'])

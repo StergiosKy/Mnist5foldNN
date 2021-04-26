@@ -1,19 +1,17 @@
 import numpy as np
-from sklearn.preprocessing import StandardScaler
 from sklearn.preprocessing import PowerTransformer
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import KFold
 from tensorflow import keras
-from dataset_funcs import create_dataset
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
 
 # Set parameters
 epochs = 100
 # values are 10, 397 or 794
-hidden_layer_neurons = 794
+hidden_layer_neurons = 397
 learning_rate = 0.001
-weight_momentum = 0.0
+weight_momentum = 0.6
 weight_decay = 0.0
 batchsize = 128
 # this flag is used to determine if we do normalization or Standardization
@@ -21,9 +19,10 @@ batchsize = 128
 # False -> Standardization, True -> Normalization
 normalization = False
 # enable 2nd hidden layer
-hidden_layer_2 = False
+hidden_layer_2 = True
 if hidden_layer_2:
-    hidden_layer_2_neurons = 50
+    # we will try 3 numbers 184, 794, 792
+    hidden_layer_2_neurons = 397
 # CE vs MSE flag
 # False -> MSE, True -> CE
 use_CE = False
@@ -41,12 +40,12 @@ print("Successfully read the dataset")
 
 
 # Centering is removing the mean value of the dataset and subtracting it from every data point
-# Warning the code below is slow and exists just for demonstration purposes:
+# Warning the code below is really slow, exists just for demonstration purposes and is not used:
 '''
 X = np.zeros(shape=dataset.shape)
 dataset_mean = np.mean(dataset)
 for i in range(len(dataset)):
-    X[i, :] = dataset[i, :] - np.mean(dataset)
+    X[i, :] = dataset[i, :] - dataset_mean
 '''
 # Normalization is the rescaling of the dataset from 0-255 to 0-1
 if normalization:
@@ -64,19 +63,21 @@ score_list = []
 history_list = []
 accuracy_list = []
 error_list = []
+history_loss = []
+history_acc = []
 
 for i, (train, test) in enumerate(kfold.split(X)):
     # Create model
     # Input is 784 length
-    # 1 hidden layer
     # output layer is of length 10 (numbers 0->9)
-    # hidden layer lengths for the example are 10, 397, 794 (O, (I+O)/2, I+O) as per the instructions
+    # hidden layer 1 units for the example study are 10, 397, 794
+    # hidden layer 2 is optimal_hidden_2 , it's double and it's half
     if hidden_layer_2:
         model = keras.Sequential([
             # hidden layer
             keras.layers.Dense(units=hidden_layer_neurons, activation='relu', input_shape=[28 * 28, ]),
             # hidden layer 2
-            keras.layers.Dense(units=50, activation='relu'),
+            keras.layers.Dense(units=hidden_layer_2_neurons, activation='relu'),
             # output layer
             keras.layers.Dense(units=10, activation='softmax')
         ])
@@ -88,6 +89,7 @@ for i, (train, test) in enumerate(kfold.split(X)):
             keras.layers.Dense(units=10, activation='softmax')
         ])
 
+    # redundant
     # early_stopping = keras.callbacks.EarlyStopping(monitor='rmse', min_delta=0, patience=0, verbose=1, mode='auto')
     keras.optimizers.SGD(lr=learning_rate, momentum=weight_momentum, decay=weight_decay, nesterov=False)
 
@@ -101,6 +103,8 @@ for i, (train, test) in enumerate(kfold.split(X)):
     # Fit model
     history = model.fit(X[train], Y[train], epochs=epochs, batch_size=batchsize, verbose=0)  # callbacks=[early_stopping],
     history_list.append(history)
+    history_loss.append(history.history['loss'])
+    history_acc.append(history.history['accuracy'])
     # Evaluate model
     scores = model.evaluate(X[test], Y[test], verbose=1)
     score_list.append(scores)
@@ -115,10 +119,16 @@ for i in range(5):
     # plot the data for the loss
     plt.plot(history_list[i].history['loss'], label=f'fold {i + 1}')
 
-if use_CE:
-    plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+if hidden_layer_2:
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
 else:
-    plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
 plt.xlabel('Epoch')
 plt.ylabel('LOSS')
 plt.legend()
@@ -130,10 +140,16 @@ for i in range(5):
 
 
 # show the plots
-if use_CE:
-    plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+if hidden_layer_2:
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
 else:
-    plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
 plt.xlabel('Epoch')
 plt.ylabel('ACCURACY')
 plt.legend()
@@ -144,4 +160,40 @@ if use_CE:
 else:
     print("MSE: ", np.mean(error_list))
 print("Accuracy: ", np.mean(accuracy_list))
+
+plt.figure(3)
+average_loss = [sum(col)/len(col) for col in zip(*history_loss)]
+average_acc = [sum(col)/len(col) for col in zip(*history_acc)]
+
+# plot the data for the accuracy
+plt.plot(average_acc)
+if hidden_layer_2:
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
+else:
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+plt.xlabel('Epoch')
+plt.ylabel('ACCURACY')
+
+plt.figure(4)
+# plot the data for the accuracy
+plt.plot(average_loss)
+if hidden_layer_2:
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer 2 Neurons: {hidden_layer_2_neurons}')
+else:
+    if use_CE:
+        plt.title(f'Validation, Metric: CE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+    else:
+        plt.title(f'Validation, Metric: MSE, Batch size: {batchsize}, Hidden Layer Neurons: {hidden_layer_neurons}')
+plt.xlabel('Epoch')
+plt.ylabel('LOSS')
+
 plt.show()

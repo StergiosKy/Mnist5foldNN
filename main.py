@@ -5,15 +5,17 @@ from sklearn.model_selection import KFold
 from tensorflow import keras
 from matplotlib import pyplot as plt
 from sklearn.preprocessing import OneHotEncoder
+from tensorflow.keras.regularizers import l2
 
 # Set parameters
 epochs = 100
 # values are 10, 397 or 794
 hidden_layer_neurons = 397
-learning_rate = 0.001
+learning_rate = 0.05
 weight_momentum = 0.6
 weight_decay = 0.0
-batchsize = 128
+r = 0.1
+batchsize = 512
 # this flag is used to determine if we do normalization or Standardization
 # we chose to avoid centering
 # False -> Standardization, True -> Normalization
@@ -75,9 +77,9 @@ for i, (train, test) in enumerate(kfold.split(X)):
     if hidden_layer_2:
         model = keras.Sequential([
             # hidden layer
-            keras.layers.Dense(units=hidden_layer_neurons, activation='relu', input_shape=[28 * 28, ]),
+            keras.layers.Dense(units=hidden_layer_neurons, activation='relu', input_shape=[28 * 28, ], kernel_regularizer=l2(r), bias_regularizer=l2(r)),
             # hidden layer 2
-            keras.layers.Dense(units=hidden_layer_2_neurons, activation='relu'),
+            keras.layers.Dense(units=hidden_layer_2_neurons, activation='relu', kernel_regularizer=l2(r), bias_regularizer=l2(r)),
             # output layer
             keras.layers.Dense(units=10, activation='softmax')
         ])
@@ -101,7 +103,7 @@ for i, (train, test) in enumerate(kfold.split(X)):
         model.compile(loss='mean_squared_error', optimizer='sgd', metrics=['accuracy'])
 
     # Fit model
-    history = model.fit(X[train], Y[train], epochs=epochs, batch_size=batchsize, verbose=0)  # callbacks=[early_stopping],
+    history = model.fit(X[train], Y[train], epochs=epochs, batch_size=batchsize, verbose=0) 
     history_list.append(history)
     history_loss.append(history.history['loss'])
     history_acc.append(history.history['accuracy'])
